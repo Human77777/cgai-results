@@ -6,13 +6,13 @@ Default
 
 <img src="A2a/default_scene_frame.jpg" width="720">
 
-Sphere, box, and plane distance fields, joined by union, intersection, and subtraction, then ray marched and lit with Phong.
+GLSL. Sphere, plane, and box SDFs combine with min, max, and subtraction. The ray steps by the returned distance, stops near 0.001, and takes a forward-difference normal for Phong shading.
 
 Creative
 
 <img src="A2a/creative_scene_frame.jpg" width="720">
 
-A small Blue Side Nexus: a cut crystal on stacked rings, with orbiting supports. The parts are smooth distance fields, moved by time.
+Same marcher. The nexus is smooth unions of bicones, cylinders, tori, and capsules. iTime moves the crystal and the orbiting supports.
 
 ## A2b
 
@@ -20,13 +20,13 @@ Default
 
 <img src="A2b/default_scene_frame.jpg" width="720">
 
-A small sine network stores the bunny and cow as distance fields. The same marcher sets both on a ground plane.
+PyTorch sine MLP, trained with Adam and MSE on mesh samples, then copied into GLSL. The shader ray-marches the bunny and cow onto a ground plane.
 
 Creative
 
 <img src="A2b/creative_scene_frame.jpg" width="720">
 
-Mid-Autumn scene. The moon is a sphere, the rabbit is the trained bunny, and a second network is the Poro, with a few primitive features on top.
+A second network, width 32, trains on a Poro mesh made from spheres and marching cubes. The moon is a sphere, the rabbit reuses the bunny field, and eyes and paws are small primitive unions.
 
 ## A3a
 
@@ -34,13 +34,13 @@ Default
 
 <img src="A3a/default_scene_frame.jpg" width="720">
 
-Procedural cloud as an absorption-emission volume. Rays take jittered steps and composite color by transmittance. The clip also passes through the cube, with the same integrator.
+WebGL. Ray-box uses the slab test. 128 jittered samples; opacity is 1 - exp(-sigma dt), and color accumulates as C += T * alpha * rgb. The still is the cloud. The clip also shows the cube with the same integrator.
 
 Creative
 
 <img src="A3a/creative_scene_frame.jpg" width="720">
 
-Nebula Eye: a slow rotating ring of mist, two ribbons, and a bright core, accumulated over a thin starfield.
+Same integrator. Density is a tilted rotating ring, two ribbons, and a Gaussian core, with sigma = 5 * density, drawn over a starfield.
 
 ## A3b
 
@@ -48,13 +48,13 @@ Lego
 
 <img src="A3b/lego_page_preview.png" width="720">
 
-A compact NeRF, two narrow ReLU layers, reconstructs the Lego truck. A held-out view reaches 23.15 dB. The shader runs the exported weights.
+PyTorch NeRF: positional encoding L=6, two 64-unit ReLU layers, 64 stratified samples. Alpha is 1 - exp(-sigma delta); color is the transmittance-weighted sum. Adam runs 10,000 steps. Weights export to GLSL and composite front to back. Held-out PSNR 23.15 dB.
 
 Ship
 
 <img src="A3b/ship_page_preview.png" width="720">
 
-The same volume renderer on the synthetic ship, with a higher-frequency encoding. Held-out PSNR is 27.58 dB. Thin rigging stays slightly soft.
+Same pipeline with encoding L=8 and 20,000 steps. Views are resized to 100x100 and composited on black. Held-out PSNR 27.58 dB. Thin rigging stays slightly soft.
 
 ## A4
 
@@ -62,31 +62,31 @@ Synthetic
 
 <img src="A4/results/synthetic-result.png" width="720">
 
-Forty 2D Gaussians fit the original Spiral Bloom. Left is the render, middle the splats, right the target. The clip is that optimization.
+Differentiable 2D Gaussians in PyTorch. Covariance is R D R^T, and color is an additive quadratic splat. Adam fits 40 splats with L1 loss. Left is the render, middle the splats, right the target. The clip is training.
 
 Mona Lisa
 
 <img src="A4/results/mona-lisa-result.png" width="720">
 
-One hundred sixty additive Gaussians approximate the Mona Lisa. Smooth splats cannot keep every edge.
+Same optimizer with 160 splats. Colors are clamped per splat, but overlap still adds, so edges stay soft.
 
 Creative
 
 <img src="A4/results/creative-result.png" width="720">
 
-Four hundred Gaussians fit Van Gogh's sunflowers. The clip is the fit over time.
+400 splats, learning rate 0.01, on Van Gogh F455. The shader repeats the training covariance and quadratic form. The clip is the fit over time.
 
 Sunflowers
 
 <img src="A4/results/sunflowers-comparison.png" width="720">
 
-Final sunflower reconstruction beside the F455 painting. Petals stay softer than the source because each splat is smooth.
+Trained field beside the painting. Smooth kernels blur petals and brush marks.
 
 ## A4 Photo
 
 <img src="A4_Photo/results/photo-800-three-panels.png" width="720">
 
-A photograph fit with 800 Gaussians: the result, the splat field, and the photo. This count is higher than the usual shader budget.
+Separate PyTorch fit with 800 Gaussians: result, splat curves, and the photo. The usual shader budget is 100-200; this is the higher-count check.
 
 ## A5
 
@@ -94,13 +94,13 @@ Default
 
 <img src="A5/default-preview.png" width="720">
 
-XPBD rope. Each frame predicts positions, solves springs, a wavy ground, and particle contacts, then rebuilds velocity.
+GLSL XPBD. Five substeps apply gravity, predict positions, solve constraints, and rebuild velocity. lambda = -C / (sum w||g||^2 + alpha/dt^2). Springs use rest length, contacts separate overlaps, and the ground is a sine height field.
 
 Creative
 
 <img src="A5/creative-preview.png" width="720">
 
-Newton's cradle. Five hanging bobs pass a released swing through contact. The motion is simulated, not keyframed.
+Five rods and bobs. Contacts run several times per substep and exchange normal velocity, so the swing travels across the row. Nothing is keyframed.
 
 ## A6
 
@@ -108,18 +108,18 @@ Bee
 
 <img src="A6/bee/comparison.png" width="720">
 
-Bee points sampled from the source image, next to points drawn by the trained reverse process. Small strokes stay a little soft.
+PyTorch DDPM. Sinusoidal position features plus time go into a small ReLU net that predicts the added noise; training is MSE and Adam. Points are dark pixels of the bee. Left is the data, right is reverse sampling.
 
 <img src="A6/bee/webgl-preview.png" width="720">
 
-The same bee model in the browser: 8,000 points and a 400-step noise schedule, with the network packed into the shader. The clip forms the shape, then lets it dissolve.
+Schedule and weights are packed into GLSL. 8,000 points step the same forward and reverse updates on the GPU. The clip is the canvas forming, then dissolving.
 
 Creative
 
 <img src="A6/creative/comparison.png" width="720">
 
-A separate model learns a five-petal bloom from noise, without pulling points toward stored target positions.
+A second model trains on a five-petal radial distribution. Sampling uses only the noise predictor, not a blend toward stored positions.
 
 <img src="A6/creative/webgl-preview.png" width="720">
 
-That bloom in the same WebGL viewer, cycling between noise and the flower.
+Same WebGL particle loop for the bloom model, cycling between noise and the flower.
